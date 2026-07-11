@@ -1,0 +1,1677 @@
+{
+  "name": "Overdue_Reminder_Inhyma_git_version",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1088,
+        480
+      ],
+      "id": "1532b8d5-65df-4c16-b49e-cbd8d43304df",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM",
+          "mode": "list",
+          "cachedResultName": "client_master",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -896,
+        336
+      ],
+      "id": "3490e8b5-d222-4b89-9f8b-5aacb36adbf1",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "6BPRj72P2XyEUzT9",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM",
+          "mode": "list",
+          "cachedResultName": "client_master",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1830047793,
+          "mode": "list",
+          "cachedResultName": "Sheet2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit#gid=1830047793"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -896,
+        560
+      ],
+      "id": "4fbd48cb-b898-4968-b89d-6244f898172f",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "6BPRj72P2XyEUzT9",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "Client Name",
+              "field2": "Client Name"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -704,
+        464
+      ],
+      "id": "3285aacf-9286-4ce9-9424-b464d9f4686c",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ======================================\n// BUSINESS RULE ENGINE\n// PDC + ACTIVE HOLD = COMPLETELY REMOVED\n// ONLY ELIGIBLE ROWS GO TO SWITCH\n// ======================================\n\nconst invoice = $json;\n\nconst today = new Date(\"2026-07-13\");\ntoday.setHours(0, 0, 0, 0);\n\nconst dayName = today.toLocaleDateString(\"en-US\", {\n    weekday: \"long\"\n});\n\nconst MS_PER_DAY = 86400000;\n\n\n// ======================================\n// SAFE DATE PARSER\n// Supports:\n// DD-MM-YYYY\n// DD/MM/YYYY\n// 15-Jun-2026\n// ======================================\n\nfunction parseDate(value) {\n\n    if (!value) return null;\n\n    const str = String(value).trim();\n\n    // DD-MM-YYYY or DD/MM/YYYY\n    const match = str.match(\n        /^(\\d{1,2})[-\\/](\\d{1,2})[-\\/](\\d{4})$/\n    );\n\n    if (match) {\n\n        const day = Number(match[1]);\n        const month = Number(match[2]) - 1;\n        const year = Number(match[3]);\n\n        const d = new Date(year, month, day);\n        d.setHours(0, 0, 0, 0);\n\n        return d;\n    }\n\n    // Other formats such as 15-Jun-2026\n    const d = new Date(str);\n\n    if (isNaN(d.getTime())) {\n        return null;\n    }\n\n    d.setHours(0, 0, 0, 0);\n\n    return d;\n}\n\n\n// ======================================\n// PARSE DATES\n// ======================================\n\nconst dueDate =\n    parseDate(invoice[\"Due Date\"]);\n\nconst holdTillDate =\n    parseDate(invoice[\"Hold Till Date\"]);\n\nconst hasPDC =\n    String(invoice[\"PDC Date\"] || \"\").trim() !== \"\";\n\n\n// ======================================\n// 1. REMOVE PDC ROWS COMPLETELY\n// ======================================\n\nif (hasPDC) {\n    return null;\n}\n\n\n// ======================================\n// 2. REMOVE ACTIVE HOLD ROWS COMPLETELY\n// ======================================\n// Example:\n// Today = 11 July\n// Hold Till = 15 July\n// -> removed\n//\n// Today = 16 July\n// Hold Till = 15 July\n// -> allowed to continue\n// ======================================\n\nif (\n    holdTillDate &&\n    today <= holdTillDate\n) {\n    return null;\n}\n\n\n// ======================================\n// 3. DUE DATE MUST EXIST\n// ======================================\n\nif (!dueDate) {\n    return null;\n}\n\n\n// ======================================\n// CALCULATE DAYS\n// ======================================\n\nconst daysLeft = Math.round(\n    (dueDate.getTime() - today.getTime()) /\n    MS_PER_DAY\n);\n\nconst daysOverdue =\n    daysLeft < 0\n        ? Math.abs(daysLeft)\n        : 0;\n\ninvoice[\"Days Overdue\"] = daysOverdue;\n\n\n// ======================================\n// DEFAULT ACTION\n// ======================================\n\ninvoice[\"Action\"] = \"NONE\";\ninvoice[\"Template Name\"] = \"\";\ninvoice[\"Update Column\"] = \"\";\n\n\n// ======================================\n// SWITCH ACTION RULES\n// ======================================\n\n\n// ---------- 3 DAYS BEFORE ----------\n\nif (daysLeft === 3) {\n\n    invoice[\"Action\"] = \"3_DAY\";\n\n    invoice[\"Template Name\"] =\n        \"invoice_due_3_days\";\n\n    invoice[\"Update Column\"] =\n        \"3 Days Before Reminder\";\n}\n\n\n// ---------- 1 DAY AFTER DUE DATE ----------\n\nelse if (daysLeft === -1) {\n\n    invoice[\"Action\"] = \"AFTER_1_DAY\";\n\n    invoice[\"Template Name\"] =\n        \"invoice_due_after_1_day_v1\";\n\n    invoice[\"Update Column\"] =\n        \"1 Day After Due Date Reminder\";\n}\n\n\n// ---------- MONDAY CUSTOMER SUMMARY ----------\n\nelse if (\n    daysLeft < 0 &&\n    dayName === \"Monday\"\n) {\n\n    invoice[\"Action\"] =\n        \"OVERDUE_MONDAY\";\n}\n\n\n// ---------- TUE / THU / SAT SALESPERSON SUMMARY ----------\n\nelse if (\n    daysLeft < 0 &&\n    (\n        dayName === \"Tuesday\" ||\n        dayName === \"Thursday\" ||\n        dayName === \"Saturday\"\n    )\n) {\n\n    invoice[\"Action\"] =\n        \"SALESPERSON_SUMMARY\";\n}\n\n\n// ======================================\n// COMMON FIELDS\n// ======================================\n\ninvoice[\"Customer Name\"] =\n    invoice[\"Client Name\"];\n\ninvoice[\"Customer WhatsApp\"] =\n    invoice[\"WhatsApp Number (Use This)\"];\n\ninvoice[\"Salesperson Name\"] =\n    invoice[\"Sales Person Name\"];\n\ninvoice[\"Salesperson WhatsApp\"] =\n    invoice[\"Sales Person Contact Number\"];\n\ninvoice[\"Outstanding Amount\"] =\n    Number(\n        invoice[\"Balance Outstanding (₹)\"] || 0\n    );\n\n\n// ======================================\n// FRIENDLY ALIASES\n// ======================================\n\ninvoice.customerName =\n    invoice[\"Customer Name\"];\n\ninvoice.customerPhone =\n    String(\n        invoice[\"Customer WhatsApp\"] || \"\"\n    );\n\ninvoice.invoiceNumber =\n    invoice[\"Invoice Number\"];\n\ninvoice.amount =\n    invoice[\"Outstanding Amount\"];\n\ninvoice.dueDate =\n    invoice[\"Due Date\"];\n\ninvoice.salesPerson =\n    invoice[\"Salesperson Name\"];\n\ninvoice.salesPhone =\n    String(\n        invoice[\"Salesperson WhatsApp\"] || \"\"\n    );\n\n\n// ======================================\n// RETURN ONLY ELIGIBLE ROW\n// ======================================\n\nreturn {\n    json: invoice\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        464
+      ],
+      "id": "66d114fb-1007-4e9e-9430-d54d7cf0ef66",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json[\"Action\"]}}",
+                    "rightValue": "3_DAY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "09fb3ace-4208-4d50-8a90-8e6d2040c9a0"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "12ed3134-9244-4c46-a291-ad2f9f2898c9",
+                    "leftValue": "={{$json[\"Action\"]}}",
+                    "rightValue": "AFTER_1_DAY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3e980707-5592-4af5-9039-02a5bcc87b22",
+                    "leftValue": "={{$json[\"Action\"]}}",
+                    "rightValue": "OVERDUE_MONDAY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "879e6497-585b-45c3-ad85-ad0e20c6fd10",
+                    "leftValue": "={{$json[\"Action\"]}}",
+                    "rightValue": "SALESPERSON_SUMMARY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -368,
+        432
+      ],
+      "id": "5b3f73a0-9bfe-45b5-a3f7-e726e3c63ada",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4ce73f69-261a-4769-a655-866a79aa743b",
+              "name": "customerPhone",
+              "value": "={{$json[\"Customer WhatsApp\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "b9f966e5-4e80-4b81-a75d-a155f41fdac2",
+              "name": "customerName",
+              "value": "={{$json[\"Customer Name\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "bc982f2a-ea98-433a-81e4-e153d768d619",
+              "name": "invoiceNumber",
+              "value": "={{$json[\"Invoice Number\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "dae928a4-123e-4239-951e-7ffdf64b27b8",
+              "name": "amount",
+              "value": "={{$json[\"Outstanding Amount\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "667661b8-f960-4562-bfc2-0a8e187852ab",
+              "name": "dueDate",
+              "value": "={{$json[\"Due Date\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "932e4b4e-3ca5-401f-a6cd-b815c3a65c3e",
+              "name": "SalesPerson",
+              "value": "={{$json[\"Salesperson Name\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "56798ef0-9376-4979-98bc-b6ef747bc9b2",
+              "name": "salesPhone",
+              "value": "={{$json[\"Salesperson WhatsApp\"]}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        128
+      ],
+      "id": "6c4ddee1-eb99-4f33-9022-9d43e8eb567a",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.wasimple.in/api/v1/whatsapp/sendMessage",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "apiKey"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-phone-id",
+              "value": "x-phone-id"
+            },
+            {
+              "name": "Authorization",
+              "value": "Authorization"
+            },
+            {
+              "name": "x-api-key",
+              "value": "x-api-key"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n({\n  templateName: \"3days_before_template_v4\",\n  language: \"en\",\n  to: \"91\" + $json.customerPhone,\n  templateVariables: [\n    $json.customerName,\n    $json.invoiceNumber,\n    Number($json.amount).toLocaleString(\"en-IN\"),\n    $json.dueDate,\n    $json[\"Sales Person Name\"],\n    String($json[\"Sales Person Contact Number\"])\n  ]\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e206fce8-9abf-4cc9-8da6-5aa8d8cdc8bf",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c8e7a163-da5e-4617-bb42-5886710f46df",
+              "name": "templateName",
+              "value": "invoice_due_after_1_day_v1",
+              "type": "string"
+            },
+            {
+              "id": "6ccbf2a8-7755-44aa-a1ca-b70baf96eb56",
+              "name": "customerPhone",
+              "value": "=={{$json.customerPhone}}",
+              "type": "string"
+            },
+            {
+              "id": "ea7021db-3aa0-4f7c-8476-68e79c061465",
+              "name": "customerName",
+              "value": "=={{$json.customerName}}",
+              "type": "string"
+            },
+            {
+              "id": "98bdbc1b-bddd-4914-8918-911ba4d98f65",
+              "name": "invoiceNumber",
+              "value": "=={{$json.invoiceNumber}}",
+              "type": "string"
+            },
+            {
+              "id": "606595ad-1d3a-4cf6-b3e1-4a7a4f64d34d",
+              "name": "amount",
+              "value": "=={{Number($json.amount).toLocaleString(\"en-IN\")}}",
+              "type": "string"
+            },
+            {
+              "id": "012bc8b5-5be6-41f4-b440-888aca784c7b",
+              "name": "dueDate",
+              "value": "=={{$json.dueDate}}",
+              "type": "string"
+            },
+            {
+              "id": "c365606c-2d04-42b8-90de-cab0d7968471",
+              "name": "salesPerson",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "4404050d-3192-4e8e-b74a-8974a74cac32",
+              "name": "salesPhone",
+              "value": "=={{$json.SalesPerson}}",
+              "type": "string"
+            },
+            {
+              "id": "f9fdb6ff-ef12-4e3e-8267-3718f77354af",
+              "name": "updateColumn",
+              "value": "=={{$json.salesPhone}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -176,
+        304
+      ],
+      "id": "40a03770-1bac-4c6d-99c1-d06b62f3b268",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.wasimple.in/api/v1/whatsapp/sendMessage",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "apiKey"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-phone-id",
+              "value": "x-phone-id"
+            },
+            {
+              "name": "Authorization",
+              "value": "Authorization"
+            },
+            {
+              "name": "x-api-key",
+              "value": "x-api-key"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n({\n  templateName: \"1days_after_due_date_v4\",\n  language: \"en\",\n  to: \"91\" + $json[\"Customer WhatsApp\"],\n  templateVariables: [\n    $json[\"Customer Name\"],\n    $json[\"Invoice Number\"],\n    Number($json[\"Outstanding Amount\"]).toLocaleString(\"en-IN\"),\n    $json[\"Due Date\"],\n    $json[\"Sales Person Name\"],\n    String($json[\"Sales Person Contact Number\"])\n  ]\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        224
+      ],
+      "id": "1fac8dea-1766-4f1b-a87e-e2d0228ce7a5",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const groups = {};\n\nfor (const item of $input.all()) {\n\n  const row = item.json;\n\n  const customer = row.customerName;\n\n  if (!groups[customer]) {\n\n    groups[customer] = {\n\n      customerName: row.customerName,\n      customerPhone: row.customerPhone,\n      salesPerson: row.salesPerson,\n      salesPhone: row.salesPhone,\n\n      totalOutstanding: 0,\n      invoices: []\n\n    };\n\n  }\n\n  groups[customer].totalOutstanding += Number(row.amount);\n\n  groups[customer].invoices.push(\n      `${row.invoiceNumber} (${row[\"Days Overdue\"]} days overdue)`\n  );\n\n}\n\nreturn Object.values(groups).map(c => ({\n\n  json: {\n\n    templateName: \"summary_customer\",\n\n    customerName: c.customerName,\n    customerPhone: c.customerPhone,\n\n    invoiceSummary: c.invoices.join(\", \"),\n\n    totalOutstanding:\n      c.totalOutstanding.toLocaleString(\"en-IN\"),\n\n    salesPerson: c.salesPerson,\n    salesPhone: c.salesPhone\n\n  }\n\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        528
+      ],
+      "id": "b301e1f9-edcc-412b-a719-8c4ac7a5d2fc",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8e2c6ce6-1887-465c-b551-b5e0339aaa6c",
+              "name": "Field\tValue templateName",
+              "value": "={{$json.templateName}}",
+              "type": "string"
+            },
+            {
+              "id": "5f5d5987-e9e9-46c5-a2af-0f55fbd54771",
+              "name": "customerPhone",
+              "value": "={{$json.customerPhone}}",
+              "type": "string"
+            },
+            {
+              "id": "46f326c0-89ee-45ce-8885-d361abf0e127",
+              "name": "customerName",
+              "value": "={{$json.customerName}}",
+              "type": "string"
+            },
+            {
+              "id": "50b35812-0aeb-4407-96d4-ec0a13ea0288",
+              "name": "invoiceSummary",
+              "value": "={{$json.invoiceSummary}}",
+              "type": "string"
+            },
+            {
+              "id": "61fc8123-fc6a-4ebd-ab0b-dcf8f6d0b2b2",
+              "name": "totalOutstanding",
+              "value": "={{$json.totalOutstanding}}",
+              "type": "string"
+            },
+            {
+              "id": "c7cc5893-7635-4833-a907-6ce4a985ac54",
+              "name": "salesPerson",
+              "value": "={{$json.salesPerson}}",
+              "type": "string"
+            },
+            {
+              "id": "fffc8636-d974-4716-9d44-ec1a3c1834e3",
+              "name": "salesPhone",
+              "value": "={{$json.salesPhone}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        528
+      ],
+      "id": "48aae469-10b1-4243-9bf5-8d8ed5a8f6ed",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.wasimple.in/api/v1/whatsapp/sendMessage",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "apiKey"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-phone-id",
+              "value": "x-phone-id"
+            },
+            {
+              "name": "Authorization",
+              "value": "Authorization"
+            },
+            {
+              "name": "x-api-key",
+              "value": "x-api-key"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n({\n  templateName: \"monday_reminder_v4\",\n  language: \"en\",\n  to: \"91\" + $json.customerPhone,\n  templateVariables: [\n    $json.customerName,\n    $json.invoiceSummary,\n    $json.totalOutstanding,\n    $json.salesPerson,\n    $json.salesPhone\n  ]\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        176,
+        528
+      ],
+      "id": "ec7b61fa-b1ea-4f03-b015-1f1285d3f3e6",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const salespersons = {};\n\nfor (const item of $input.all()) {\n\n    const row = item.json;\n    const sp = row.salesPerson;\n\n    if (!salespersons[sp]) {\n        salespersons[sp] = {\n            salesPerson: row.salesPerson,\n            salesPhone: row.salesPhone,\n            customers: {},\n            grandTotal: 0\n        };\n    }\n\n    const customer = row.customerName;\n\n    if (!salespersons[sp].customers[customer]) {\n        salespersons[sp].customers[customer] = {\n            totalAmount: 0,\n            maxDaysOverdue: 0\n        };\n    }\n\n    const amount = Number(row.amount || 0);\n    const daysOverdue = Number(row[\"Days Overdue\"] || 0);\n\n    // Add all invoice amounts for this customer\n    salespersons[sp].customers[customer].totalAmount += amount;\n\n    // Keep highest overdue days for this customer\n    salespersons[sp].customers[customer].maxDaysOverdue =\n        Math.max(\n            salespersons[sp].customers[customer].maxDaysOverdue,\n            daysOverdue\n        );\n\n    // Salesperson grand total\n    salespersons[sp].grandTotal += amount;\n}\n\n\n// ======================================\n// CREATE FINAL OUTPUT\n// ======================================\n\nreturn Object.values(salespersons).map(sp => {\n\n    const summary = Object.entries(sp.customers)\n        .map(([customer, data]) => {\n\n            const dayText =\n                data.maxDaysOverdue === 1\n                    ? \"1 day overdue\"\n                    : `${data.maxDaysOverdue} days overdue`;\n\n            return `${customer}: ₹${data.totalAmount.toLocaleString(\"en-IN\")} (${dayText})`;\n\n        })\n        .join(\", \");\n\n    return {\n        json: {\n            templateName: \"salesperson_collection_summary_v1\",\n\n            salesPerson: sp.salesPerson,\n            salesPhone: sp.salesPhone,\n\n            customerSummary: summary,\n\n            grandTotal: sp.grandTotal.toLocaleString(\"en-IN\")\n        }\n    };\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        784
+      ],
+      "id": "ea2733cc-b771-49d8-bf44-867a8e9adf1f",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c91b6c3c-d815-4f18-9928-43508b1614ab",
+              "name": "templateName",
+              "value": "={{$json.templateName}}",
+              "type": "string"
+            },
+            {
+              "id": "87cbf7b5-1a02-4a1d-8b0b-82b6d49bb227",
+              "name": "salesPhone",
+              "value": "={{$json.salesPhone}}",
+              "type": "string"
+            },
+            {
+              "id": "8f76fa81-3e13-46ca-b595-b33c53fd2894",
+              "name": "salesPerson",
+              "value": "={{$json.salesPerson}}",
+              "type": "string"
+            },
+            {
+              "id": "7628b5b9-fbbb-462d-90e0-913f76cd705b",
+              "name": "customerSummary",
+              "value": "={{$json.customerSummary}}",
+              "type": "string"
+            },
+            {
+              "id": "803bb3c2-14ea-4d07-ab27-c4dbe998c960",
+              "name": "grandTotal",
+              "value": "={{$json.grandTotal}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        784
+      ],
+      "id": "fb8cae6e-7a6d-4898-ab8d-c91ea14c23f6",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.wasimple.in/api/v1/whatsapp/sendMessage",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "apiKey"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-phone-id",
+              "value": "v"
+            },
+            {
+              "name": "Authorization",
+              "value": "Authorization"
+            },
+            {
+              "name": "x-api-key",
+              "value": "x-api-key"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n({\n  templateName: \"salesperson_summary_v4\",\n  language: \"en\",\n  to: \"91\" + $json.salesPhone,\n  templateVariables: [\n    $json.salesPerson,\n    $json.customerSummary,\n    $json.grandTotal\n  ]\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        176,
+        784
+      ],
+      "id": "31e1dd95-9baa-435e-8a53-4847f1c5fa7d",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        272,
+        112
+      ],
+      "id": "dab34f01-5fcb-4dc1-ab6e-385d027f5617",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9d2bfec6-b2b1-4ad5-8685-0aaa6b54288e",
+              "leftValue": "={{$json.waMessageId}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        144,
+        0
+      ],
+      "id": "45e1eec8-96e1-4b36-afbf-ce589590c668",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM",
+          "mode": "list",
+          "cachedResultName": "client_master",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1830047793,
+          "mode": "list",
+          "cachedResultName": "Sheet2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit#gid=1830047793"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "3 Days Before Reminder": "={{$now.format(\"dd-MM-yyyy HH:mm\")}}",
+            "Invoice Number": "={{ $json.invoiceNumber }}"
+          },
+          "matchingColumns": [
+            "Invoice Number"
+          ],
+          "schema": [
+            {
+              "id": "Invoice Date",
+              "displayName": "Invoice Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Invoice Number",
+              "displayName": "Invoice Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Client Name",
+              "displayName": "Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Client Contact Number",
+              "displayName": "Client Contact Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Balance Outstanding (₹)",
+              "displayName": "Balance Outstanding (₹)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sales Person Name",
+              "displayName": "Sales Person Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sales Person Contact Number",
+              "displayName": "Sales Person Contact Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Due Date",
+              "displayName": "Due Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment Status",
+              "displayName": "Payment Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PDC Date",
+              "displayName": "PDC Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Hold Till Date",
+              "displayName": "Hold Till Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "3 Days Before Reminder",
+              "displayName": "3 Days Before Reminder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "1 Day After Due Date Reminder",
+              "displayName": "1 Day After Due Date Reminder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "After Due Date - Next Monday Reminder",
+              "displayName": "After Due Date - Next Monday Reminder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Days Overdue",
+              "displayName": "Days Overdue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Remark",
+              "displayName": "Remark",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        112
+      ],
+      "id": "ffcdd2cf-7dc7-475d-9597-8f3501688630",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "6BPRj72P2XyEUzT9",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        400,
+        288
+      ],
+      "id": "293cef33-30ed-4fa8-afe3-25dd73a756b0",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9d2bfec6-b2b1-4ad5-8685-0aaa6b54288e",
+              "leftValue": "={{$json.waMessageId}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        176,
+        224
+      ],
+      "id": "e9686b4c-6a00-44d5-a674-cfc94f2edfc3",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM",
+          "mode": "list",
+          "cachedResultName": "client_master",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1830047793,
+          "mode": "list",
+          "cachedResultName": "Sheet2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit#gid=1830047793"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Invoice Number": "={{$json[\"Invoice Number\"]}}",
+            "1 Day After Due Date Reminder": "={{$now.format(\"dd-MM-yyyy HH:mm\")}}"
+          },
+          "matchingColumns": [
+            "Invoice Number"
+          ],
+          "schema": [
+            {
+              "id": "Invoice Date",
+              "displayName": "Invoice Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Invoice Number",
+              "displayName": "Invoice Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Client Name",
+              "displayName": "Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Client Contact Number",
+              "displayName": "Client Contact Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Balance Outstanding (₹)",
+              "displayName": "Balance Outstanding (₹)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sales Person Name",
+              "displayName": "Sales Person Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sales Person Contact Number",
+              "displayName": "Sales Person Contact Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Due Date",
+              "displayName": "Due Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment Status",
+              "displayName": "Payment Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PDC Date",
+              "displayName": "PDC Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Hold Till Date",
+              "displayName": "Hold Till Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "3 Days Before Reminder",
+              "displayName": "3 Days Before Reminder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "1 Day After Due Date Reminder",
+              "displayName": "1 Day After Due Date Reminder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Days Overdue",
+              "displayName": "Days Overdue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Remark",
+              "displayName": "Remark",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        576,
+        288
+      ],
+      "id": "26a1f4c5-ad79-40b4-8b97-cb5876741f0f",
+      "name": "Update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "6BPRj72P2XyEUzT9",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bdd0e085-3928-48f6-bb8c-a1f0b974de3f",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        464
+      ],
+      "id": "ebc2b5eb-0a80-4707-bcf6-6f693619badd",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        528,
+        736
+      ],
+      "id": "c2ca5e7a-4195-4dcf-80ba-f628f4738af5",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM",
+          "mode": "list",
+          "cachedResultName": "client_master",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1405338751,
+          "mode": "list",
+          "cachedResultName": "Sheet3",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit#gid=1405338751"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now.format(\"dd-MM-yyyy HH:mm\") }}",
+            "Customer Name": "={{ $json.customerName }}",
+            "Customer Phone": "={{ $json.customerPhone }}",
+            "Sales Person": "={{ $json.salesPerson }}",
+            "Sales Phone": "={{ $json.salesPhone }}",
+            "Invoice Summary": "={{ $json.invoiceSummary }}",
+            "Total Outstanding": "={{ $json.totalOutstanding }}",
+            "Template Name": "={{ $json[\"Field\\tValue templateName\"] }}",
+            "WA Message ID": "={{ $json.waMessageId }}",
+            "Status": "Sent"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Phone",
+              "displayName": "Customer Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sales Person",
+              "displayName": "Sales Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sales Phone",
+              "displayName": "Sales Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Invoice Summary",
+              "displayName": "Invoice Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Outstanding",
+              "displayName": "Total Outstanding",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Template Name",
+              "displayName": "Template Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WA Message ID",
+              "displayName": "WA Message ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        688,
+        608
+      ],
+      "id": "b40541a9-fc34-44b2-a194-f077477f08a4",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "6BPRj72P2XyEUzT9",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "53faed1a-9924-4d20-8cff-cd842b725269",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "74760e6e531e7ad9fd817e000faa6249726174e61e8da593ec7669f2c204c956"
+  },
+  "nodeGroups": [],
+  "id": "PZNDPnVKOBUBhLNU",
+  "tags": []
+}

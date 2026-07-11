@@ -1,0 +1,685 @@
+{
+  "name": "pdc & credit limit reminder_git_version",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        288
+      ],
+      "id": "4f277977-c424-40d9-872d-3a213b8c4355",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM",
+          "mode": "list",
+          "cachedResultName": "client_master",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1830047793,
+          "mode": "list",
+          "cachedResultName": "Sheet2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit#gid=1830047793"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -496,
+        288
+      ],
+      "id": "672d7d02-ef22-4944-be4a-a6f97f3325b2",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "6BPRj72P2XyEUzT9",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "69b115e7-3028-48e3-a8e6-b63440956818",
+              "leftValue": "={{ $json[\"Due Date\"] }}",
+              "rightValue": "Pending",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -288,
+        288
+      ],
+      "id": "829a78cf-060a-4c9b-8767-3092be2fce13",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3adf5de8-e798-4ba3-a3c6-fa1228cd7578",
+              "leftValue": "={{ $json[\"Hold Till Date\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -48,
+        272
+      ],
+      "id": "6fc2d392-220d-4319-9e00-8cb27ba910c6",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM",
+          "mode": "list",
+          "cachedResultName": "client_master",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1RK9vtzJ3HX-TSPmT19dEc8mrCItFbYn1ANfOyFoppAM/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e85ccba9-7a3c-42bb-937f-5e14e806fc11",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "6BPRj72P2XyEUzT9",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7e9be8a2-d11c-4fd8-a0e9-3295c976bdf0",
+              "leftValue": "={{$json[\"PDC Date\"]}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        176,
+        384
+      ],
+      "id": "b8643d01-221a-4859-9994-5fb5d17f20d8",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "Client Name",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        240,
+        80
+      ],
+      "id": "5ba79940-8b69-4b03-81aa-d1da601522e7",
+      "name": "Merge",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Group invoices customer-wise\nconst customers = {};\n\nfor (const item of $input.all()) {\n\n  const r = item.json;\n\n  const customer = r[\"Client Name\"];\n\n  if (!customers[customer]) {\n    customers[customer] = {\n      customerName: customer,\n      salesPerson: r[\"Sales Person Name\"],\n      salesPhone: r[\"Sales Person Contact Number\"],\n      creditLimit: Number(r[\"Credit Limit (₹)\"] || 0),\n      totalOutstanding: 0,\n      invoices: []\n    };\n  }\n\n  customers[customer].totalOutstanding += Number(r[\"Balance Outstanding (₹)\"] || 0);\n\n  customers[customer].invoices.push({\n    invoiceNumber: r[\"Invoice Number\"],\n    invoiceDate: r[\"Invoice Date\"],\n    amount: Number(r[\"Balance Outstanding (₹)\"] || 0)\n  });\n\n}\n\nconst output = [];\n\nfor (const customer of Object.values(customers)) {\n\n  if (customer.totalOutstanding > customer.creditLimit) {\n\n    output.push({\n      json: {\n\n        customerName: customer.customerName,\n\n        salesPerson: customer.salesPerson,\n\n        salesPhone: customer.salesPhone,\n\n        creditLimit: customer.creditLimit,\n\n        currentOutstanding: customer.totalOutstanding,\n\n        exceededBy:\n          customer.totalOutstanding - customer.creditLimit,\n\n        invoiceCount: customer.invoices.length,\n\n        invoiceList: customer.invoices\n          .map(i => i.invoiceNumber)\n          .join(\", \")\n\n      }\n    });\n\n  }\n\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        80
+      ],
+      "id": "a75d80ae-d1d8-463b-94a8-9e6c9e3034d9",
+      "name": "Code in JavaScript",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "655aacf3-738c-45a0-8665-48acb270e352",
+              "name": "templateName",
+              "value": "credit_limit_exceeded_v1",
+              "type": "string"
+            },
+            {
+              "id": "45dcbc95-103e-4ecd-8ceb-7f8a4fe6b4a3",
+              "name": "phone",
+              "value": "={{$json.salesPhone}}",
+              "type": "string"
+            },
+            {
+              "id": "771d9d42-dc15-4548-a32b-3dafac2e5cb2",
+              "name": "salesPerson",
+              "value": "={{$json.salesPerson}}",
+              "type": "string"
+            },
+            {
+              "id": "34499d88-6c36-478e-8d7c-ddbd2bd22702",
+              "name": "customerName",
+              "value": "={{$json.customerName}}",
+              "type": "string"
+            },
+            {
+              "id": "d1d8a791-c05c-4ca0-a787-ebffeddad29d",
+              "name": "invoiceList",
+              "value": "={{$json.invoiceList}}",
+              "type": "string"
+            },
+            {
+              "id": "5b99382c-0afa-4982-af78-1c6730c8cbdd",
+              "name": "currentOutstanding",
+              "value": "={{Number($json.currentOutstanding).toLocaleString('en-IN')}}",
+              "type": "string"
+            },
+            {
+              "id": "dae6ae41-4f60-41b0-ac50-fc3231f388f9",
+              "name": "creditLimit",
+              "value": "={{Number($json.creditLimit).toLocaleString('en-IN')}}",
+              "type": "string"
+            },
+            {
+              "id": "14f3bf4d-59bf-436e-b2be-f976f06a8a20",
+              "name": "exceededBy",
+              "value": "={{Number($json.exceededBy).toLocaleString('en-IN')}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        640,
+        80
+      ],
+      "id": "93e571bf-6c81-47d8-91b5-4c722e8c19f1",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = [];\n\nconst tomorrow = new Date();\ntomorrow.setHours(0,0,0,0);\ntomorrow.setDate(tomorrow.getDate() + 1);\n\nfor (const item of $input.all()) {\n\n  const row = item.json;\n\n  if (!row[\"PDC Date\"]) continue;\n\n  const pdc = new Date(row[\"PDC Date\"]);\n  pdc.setHours(0,0,0,0);\n\n  if (pdc.getTime() === tomorrow.getTime()) {\n    output.push({\n      json: row\n    });\n  }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        288
+      ],
+      "id": "5b08c878-8f33-4fb6-b87c-4053e96dc7c8",
+      "name": "Code in JavaScript1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "67565ad1-dfe8-4839-a6ae-1ddb1142881a",
+              "name": "customerPhone",
+              "value": "={{ $json[\"Client Contact Number\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "281d6483-0955-461f-8243-be546b5920d8",
+              "name": "customerName",
+              "value": "={{ $json[\"Client Name\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "71d9cc5f-3010-4794-ad16-7252fb34c715",
+              "name": "invoiceNumber",
+              "value": "={{ $json[\"Invoice Number\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "e3add99e-25ad-4144-bff5-0d9643e8b2df",
+              "name": "pdcDate",
+              "value": "={{ $json[\"PDC Date\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "99f291e7-3da4-4d7b-be78-9a0848536dc1",
+              "name": "amount",
+              "value": "={{ Number($json[\"Balance Outstanding (₹)\"]).toLocaleString(\"en-IN\") }}",
+              "type": "string"
+            },
+            {
+              "id": "003d7ab0-1984-48e7-b806-efef9014db68",
+              "name": "salesPerson",
+              "value": "={{ $json[\"Sales Person Name\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "d132ec06-ee10-4b0d-bb2b-edb322e00597",
+              "name": "salesPhone",
+              "value": "={{ $json[\"Sales Person Contact Number\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        288
+      ],
+      "id": "a5d159ac-7437-41f7-be99-76dba99ca43c",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.wasimple.in/api/v1/whatsapp/sendMessage",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "apiKey"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-phone-id",
+              "value": "x-phone-id"
+            },
+            {
+              "name": "Authorization",
+              "value": "Authorization"
+            },
+            {
+              "name": "x-api-key",
+              "value": "x-api-key"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n({\n  templateName: \"pdc_customer_reminder_v4\",\n  language: \"en\",\n  to: \"+91\" + $json.customerPhone,\n  templateVariables: [\n    $json.customerName,\n    $json.invoiceNumber,\n    $json.pdcDate,\n    $json.salesPerson,\n    $json.salesPhone\n  ]\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        848,
+        288
+      ],
+      "id": "7477113c-79f1-4281-ae4f-c84ee8545772",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.wasimple.in/api/v1/whatsapp/sendMessage",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "apiKey"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-phone-id",
+              "value": "x-phone-id"
+            },
+            {
+              "name": "Authorization",
+              "value": "Authorization"
+            },
+            {
+              "name": "x-api-key",
+              "value": "x-api-key"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        848,
+        480
+      ],
+      "id": "92be33b9-ea94-488a-84ef-58692d146f65",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const accountsNumbers = [\n  \"8879302705\",\n  \"8879302705\",\n  \"8879302705\"\n];\n\nconst row = $input.first().json;\n\nreturn accountsNumbers.map(phone => ({\n  json: {\n    templateName: \"pdc_accounts_reminder_v4\",\n    language: \"en\",\n    to: \"+91\" + phone,\n    templateVariables: [\n      row[\"Client Name\"],\n      row[\"Invoice Number\"],\n      row[\"PDC Date\"],\n      row[\"Balance Outstanding (₹)\"]\n    ]\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        480
+      ],
+      "id": "d526058a-a431-4c13-ad6b-0f7e325abd16",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.wasimple.in/api/v1/whatsapp/sendMessage",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "apiKey"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-phone-id",
+              "value": "v"
+            },
+            {
+              "name": "Authorization",
+              "value": "Authorization"
+            },
+            {
+              "name": "x-api-key",
+              "value": "x-api-key"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n({\n  templateName: \"credit_limit_exceeded_v4\",\n  language: \"en\",\n  to: \"+91\" + $json.phone,\n  templateVariables: [\n    $json.salesPerson,\n    $json.customerName,\n    $json.invoiceList,\n    $json.currentOutstanding,\n    $json.creditLimit,\n    $json.exceededBy\n  ]\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        848,
+        80
+      ],
+      "id": "1a030a7e-a3d8-4d32-8931-2a3283212b2c",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5dbc3d16-fde3-4e13-937c-9665c4d90cc1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "74760e6e531e7ad9fd817e000faa6249726174e61e8da593ec7669f2c204c956"
+  },
+  "nodeGroups": [],
+  "id": "Bxu2BTqtM5kQW9dK",
+  "tags": []
+}
